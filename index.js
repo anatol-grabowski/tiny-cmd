@@ -1,16 +1,19 @@
 const child_process = require('child_process')
 const events = require('events')
-const debug = require('debug')('tiny-cmd')
+const debug = {
+  'started': require('debug')('tiny-cmd:started'),
+  'exited':  require('debug')('tiny-cmd:exited'),
+  'error':   require('debug')('tiny-cmd:error'),
+  'stdin':   require('debug')('tiny-cmd:stdin'),
+  'stdout':  require('debug')('tiny-cmd:stdout'),
+  'stderr':  require('debug')('tiny-cmd:stderr'),
+}
 const assert = require('assert')
 
 const io = ['stdin', 'stdout', 'stderr']
 class TinyProc extends events.EventEmitter {
-  static proc(cmd, options={}) {
+  static create(cmd) {
     const tinyProc = new TinyProc(cmd)
-    tinyProc.options = {
-      ...tinyProc.options,
-      ...options,
-    }
     return tinyProc
   }
 
@@ -19,9 +22,6 @@ class TinyProc extends events.EventEmitter {
     this.command = command
     this.spawned = null
     this.exited = false
-    this.options = {
-      log: true,
-    }
     this.spawnOptions = {
       shell: true,
     }
@@ -59,21 +59,26 @@ class TinyProc extends events.EventEmitter {
     })
   }
 
-  write(message) {
-    this.spawned.stdin.write(message)
-    this._log('stdin', message)
+  write(...args) {
+    this.spawned.stdin.write(...args)
+    this._log('stdin', args[0])
+  }
+
+  end(...args) {
+    this.spawned.stdin.end(...args)
+    this._log('stdin', args[0])
   }
 
   _log(type, message) {
     if (!this.options.log) return
-    const intro = `[${this.spawned.pid}] ${type.padStart(7)}:`
+    const intro = `${''.padStart(7-type.length)}[${this.spawned.pid}]`
     if (typeof message === 'string') {
       message = message.replace(/\n$/g, '')
       message = message.split('\n')
-      message.forEach(msg => console.log(intro, msg))
+      message.forEach(msg => debug[type](intro, msg))
       return
     }
-    console.log(intro, message)
+    debug[type](intro, message)
   }
 }
 
