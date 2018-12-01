@@ -70,7 +70,6 @@ class TinyProc extends events.EventEmitter {
   }
 
   _log(type, message) {
-    if (!this.options.log) return
     const intro = `${''.padStart(7-type.length)}[${this.spawned.pid}]`
     if (typeof message === 'string') {
       message = message.replace(/\n$/g, '')
