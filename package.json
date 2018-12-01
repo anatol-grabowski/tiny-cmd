@@ -3,6 +3,7 @@
   "version": "2.0.1",
   "description": "",
   "main": "index.js",
+  "repository": "https://github.com/grabantot/tiny-cmd",
   "scripts": {
     "start": "node main.js"
   },
