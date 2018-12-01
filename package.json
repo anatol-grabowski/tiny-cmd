@@ -7,13 +7,16 @@
     "start": "node main.js"
   },
   "keywords": [
-    "spawn", 
-    "promise", 
-    "stdout", 
-    "stdin", 
-    "stderr", 
-    "process", 
-    "child_process", 
+    "spawn",
+    "promise",
+    "stdout",
+    "stdin",
+    "stderr",
+    "process",
+    "child_process",
     "await"
-  ]
+  ],
+  "dependencies": {
+    "debug": "^4.1.0"
+  }
 }

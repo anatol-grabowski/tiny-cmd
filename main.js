@@ -3,7 +3,7 @@ const tinyCmd = require('.')
 async function main() {
   const cmd = process.argv[2] || 'echo -n hello && echo -n 123'
   const proc = await tinyCmd.proc(cmd)
-  proc.result = ''
+  proc.run('')
   proc.on('stdout', data => {
     const lastOut = data.toString().replace(/\n$/g, '').split('\n').pop()
     proc.result = lastOut
@@ -12,7 +12,7 @@ async function main() {
       return
     }
   })
-  const res = await proc.run()
+  const res = await proc.awaitExit()
   console.log(`result: '${res}'`)
 }
 

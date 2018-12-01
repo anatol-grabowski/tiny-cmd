@@ -1,11 +1,24 @@
 const child_process = require('child_process')
 const events = require('events')
+const debug = require('debug')('tiny-cmd')
+const assert = require('assert')
 
+const io = ['stdin', 'stdout', 'stderr']
 class TinyProc extends events.EventEmitter {
+  static proc(cmd, options={}) {
+    const tinyProc = new TinyProc(cmd)
+    tinyProc.options = {
+      ...tinyProc.options,
+      ...options,
+    }
+    return tinyProc
+  }
+
   constructor(command) {
     super()
     this.command = command
     this.spawned = null
+    this.exited = false
     this.options = {
       log: true,
     }
@@ -13,39 +26,42 @@ class TinyProc extends events.EventEmitter {
       shell: true,
     }
     this.result = null
+    this.on('close', code => {
+      this.exited = true
+      this._log('exited', code)
+    })
+    this.on('error', err => {
+      this.exited = true
+      this._log('error', err)
+    })
+    io.forEach(stream => {
+      this.on(stream, data => this._log(stream, data.toString()))
+    })
   }
-  
-  run() {
+
+  run(initialResult) {
+    assert(!this.exited, 'proc already exited')
+    this.spawned = child_process.spawn(this.command, [], this.spawnOptions)
+    if (arguments.length > 0) this.result = initialResult
+    this._log('started', this.spawned.spawnargs.join(' '))
+    io.forEach(stream => {
+      this.spawned[stream].on('data', data => this.emit(stream, data))
+    })
+    this.spawned.on('close', code => this.emit('close', code))
+    this.spawned.on('error', err => this.emit('error', err))
+  }
+
+  async awaitExit() {
+    if (this.exited) return this.result
     return new Promise((resolve, reject) => {
-      const exitHandler = (code) => {
-        this._log('exited', code)
-        resolve(this.result)
-      }
-      const errorHandler = (err) => {
-        this._log('error', err)
-        reject(err)
-      }
-      this.spawned = child_process.spawn(this.command, [], this.spawnOptions)
-      this._log('started', this.spawned.spawnargs.join(' '))
-      this._addHandlers()
-      this.spawned.on('close', exitHandler)
-      this.spawned.on('error', errorHandler)
+      this.on('close', () => resolve(this.result))
+      this.on('error', err => reject(err))
     })
   }
 
   write(message) {
     this.spawned.stdin.write(message)
     this._log('stdin', message)
-  }
-
-  _addHandlers() {
-    const io = ['stdin', 'stdout', 'stderr']
-    io.forEach(stream => {
-      this.spawned[stream].on('data', data => {
-        this._log(stream, data.toString())
-        this.emit(stream, data)
-      })
-    }) 
   }
 
   _log(type, message) {
@@ -61,20 +77,4 @@ class TinyProc extends events.EventEmitter {
   }
 }
 
-const tinyCmd = {
-  run: async function(cmd, options={}) {
-    const tinyProc = this.proc(cmd, options)
-    const result = await tinyProc.run()
-    return result
-  },
-  proc: function(cmd, options={}) {
-    const tinyProc = new TinyProc(cmd)
-    tinyProc.options = {
-      ...tinyProc.options,
-      ...options,
-    }
-    return tinyProc
-  }
-}
-
-module.exports = tinyCmd
+module.exports = TinyProc
