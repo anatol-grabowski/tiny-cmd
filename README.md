@@ -20,7 +20,7 @@ console.log('result:', res) // prints 'result: hello123'
 run with DEBUG=tiny-cmd:* to see all logs
 
 ## proc methods
-- run(initialResult)
+- run(initialResult, expectedExitCode=0)
 - write(chunk)
 - end(chunk)
 - awaitExit()
@@ -28,7 +28,8 @@ run with DEBUG=tiny-cmd:* to see all logs
 ## fields
 - spawnOptions
 - spawned
-- exited
+- isClosed
+- exitCode
 - result
 
 ## events

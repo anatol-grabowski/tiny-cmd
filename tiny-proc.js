@@ -1,3 +1,4 @@
+const assert = require('assert')
 const child_process = require('child_process')
 const events = require('events')
 const debug = {
@@ -8,43 +9,64 @@ const debug = {
   'stdout':  require('debug')('tiny-cmd:stdout'),
   'stderr':  require('debug')('tiny-cmd:stderr'),
 }
-const assert = require('assert')
+const longestHeader = Object.keys(debug).reduce((m, k) => Math.max(m, k))
 
-const io = ['stdin', 'stdout', 'stderr']
+const ios = ['stdin', 'stdout', 'stderr']
+
 class TinyProc extends events.EventEmitter {
-  static create(cmd) {
-    const tinyProc = new TinyProc(cmd)
+  static create(...args) {
+    const tinyProc = new TinyProc(...args)
     return tinyProc
   }
 
-  constructor(command) {
+  constructor(command, expectedExitCode=0) {
     super()
     this.command = command
-    this.spawned = null
-    this.exited = false
+    this.expectedExitCode = expectedExitCode
     this.spawnOptions = {
       shell: true,
     }
+    this.exitCode = null
+    this.isClosed = false
+    this.spawned = null
     this.result = null
+    this._createSubscriptions()
+    this._exitPromise = this._makeExitPromise() // TODO: unsubscribe?
+  }
+
+  _createSubscriptions() {
     this.on('close', code => {
-      this.exited = true
+      this.isClosed = true
+      this.exitCode = code
       this._log('exited', code)
     })
     this.on('error', err => {
-      this.exited = true
+      this.isClosed = true
       this._log('error', err)
     })
-    io.forEach(stream => {
+    ios.forEach(stream => {
       this.on(stream, data => this._log(stream, data.toString()))
     })
   }
 
+  _makeExitPromise() {
+    return new Promise((resolve, reject) => {
+      this.once('close', code => resolve(code))
+      this.once('error', err => reject(err))
+    })
+  }
+
   run(initialResult) {
-    assert(!this.exited, 'proc already exited')
+    assert.equal(this.spawned, null, 'already running')
+    assert(!this.isClosed, 'already closed')
     this.spawned = child_process.spawn(this.command, [], this.spawnOptions)
     if (arguments.length > 0) this.result = initialResult
     this._log('started', this.spawned.spawnargs.join(' '))
-    io.forEach(stream => {
+    this._pipeEvents()
+  }
+
+  _pipeEvents() {
+    ios.forEach(stream => {
       this.spawned[stream].on('data', data => this.emit(stream, data))
     })
     this.spawned.on('close', code => this.emit('close', code))
@@ -52,11 +74,12 @@ class TinyProc extends events.EventEmitter {
   }
 
   async awaitExit() {
-    if (this.exited) return this.result
-    return new Promise((resolve, reject) => {
-      this.on('close', () => resolve(this.result))
-      this.on('error', err => reject(err))
-    })
+    const code = await this._exitPromise
+    if (this.expectedExitCode != null) {
+      const errMsg = "unexpected exit code, do proc.run(cmd, null) if you don't care"
+      assert.equal(code, this.expectedExitCode, errMsg)
+    }
+    return this.result
   }
 
   write(...args) {
@@ -70,7 +93,7 @@ class TinyProc extends events.EventEmitter {
   }
 
   _log(type, message) {
-    const intro = `${''.padStart(7-type.length)}[${this.spawned.pid}]`
+    const intro = `${''.padStart(longestHeader-type.length)}[${this.spawned.pid}]`
     if (typeof message === 'string') {
       message = message.replace(/\n$/g, '')
       message = message.split('\n')

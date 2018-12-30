@@ -2,10 +2,13 @@
   "name": "tiny-cmd",
   "version": "2.0.3",
   "description": "",
-  "main": "index.js",
+  "main": "tiny-proc.js",
   "repository": "https://github.com/grabantot/tiny-cmd",
   "scripts": {
-    "start": "node main.js"
+    "start": "node main.js",
+    "cover": "nyc mocha test/* && nyc report --reporter=html",
+    "test": "mocha test/*",
+    "test-debug": "DEBUG='tiny-cmd:*' npm run test"
   },
   "keywords": [
     "spawn",
@@ -19,5 +22,11 @@
   ],
   "dependencies": {
     "debug": "^4.1.0"
+  },
+  "devDependencies": {
+    "chai": "^4.2.0",
+    "chai-as-promised": "^7.1.1",
+    "mocha": "^5.2.0",
+    "nyc": "^13.1.0"
   }
 }
