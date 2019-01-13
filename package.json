@@ -1,5 +1,5 @@
 {
-  "name": "tiny-cmd",
+  "name": "tiny-proc",
   "version": "2.1.0",
   "description": "",
   "main": "tiny-proc.js",
@@ -8,7 +8,7 @@
     "start": "node main.js",
     "cover": "nyc mocha test/* && nyc report --reporter=html",
     "test": "mocha test/*",
-    "test-debug": "DEBUG='tiny-cmd:*' npm run test"
+    "test-debug": "DEBUG='tiny-proc:*' npm run test"
   },
   "keywords": [
     "spawn",

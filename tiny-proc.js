@@ -1,15 +1,17 @@
 const assert = require('assert')
 const child_process = require('child_process')
 const events = require('events')
+const debugPrefix = 'tiny-proc:'
 const debug = {
-  'started': require('debug')('tiny-cmd:started'),
-  'exited':  require('debug')('tiny-cmd:exited'),
-  'error':   require('debug')('tiny-cmd:error'),
-  'stdin':   require('debug')('tiny-cmd:stdin'),
-  'stdout':  require('debug')('tiny-cmd:stdout'),
-  'stderr':  require('debug')('tiny-cmd:stderr'),
+  'started': require('debug')(`${debugPrefix}started`),
+  'exited':  require('debug')(`${debugPrefix}exited`),
+  'error':   require('debug')(`${debugPrefix}error`),
+  'stdin':   require('debug')(`${debugPrefix}stdin`),
+  'stdout':  require('debug')(`${debugPrefix}stdout`),
+  'stderr':  require('debug')(`${debugPrefix}stderr`),
 }
-const longestHeader = Object.keys(debug).reduce((m, k) => Math.max(m, k))
+const longestHeader = Object.keys(debug)
+  .reduce((m, k) => Math.max(m, k.length), 0)
 
 const ios = ['stdin', 'stdout', 'stderr']
 
@@ -93,7 +95,8 @@ class TinyProc extends events.EventEmitter {
   }
 
   _log(type, message) {
-    const intro = `${''.padStart(longestHeader-type.length)}[${this.spawned.pid}]`
+    const padLen = longestHeader - type.length
+    const intro = `${''.padStart(padLen)}[${this.spawned.pid}]`
     if (typeof message === 'string') {
       message = message.replace(/\n$/g, '')
       message = message.split('\n')
